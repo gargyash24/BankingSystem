@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Admin Panel</title>
+<style>
+body { font-family: Arial; padding:20px; background:#f2f4f8;}
+.card {
+    background:white;
+    padding:15px;
+    margin:10px 0;
+    border-radius:6px;
+    box-shadow:0 2px 6px rgba(0,0,0,0.1);
+}
+button { padding:6px; cursor:pointer; }
+pre { background:#eee; padding:10px; }
+</style>
+</head>
+
+<body>
+
+<h2>🏦 Admin Panel</h2>
+
+<div class="card">
+<h3>All Accounts</h3>
+<button onclick="loadAccounts()">Load Accounts</button>
+<pre id="accounts"></pre>
+</div>
+
+<div class="card">
+<h3>All Transactions</h3>
+<button onclick="loadTransactions()">Load Transactions</button>
+<pre id="transactions"></pre>
+</div>
+
+<script>
+const api = path => "http://localhost:3000/api" + path;
+
+async function loadAccounts(){
+    const res = await fetch(api("/admin/accounts"));
+    accounts.innerText =
+        JSON.stringify(await res.json(), null, 2);
+}
+
+async function loadTransactions(){
+    const res = await fetch(api("/admin/transactions"));
+    transactions.innerText =
+        JSON.stringify(await res.json(), null, 2);
+}
+</script>
+
+</body>
+</html>

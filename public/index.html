@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Banking System</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+:root {
+  --primary: #2563eb;
+  --bg: #f4f6fb;
+  --card: #ffffff;
+  --text: #1f2937;
+  --muted: #6b7280;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+header {
+  background: var(--primary);
+  color: white;
+  padding: 16px;
+  text-align: center;
+  font-size: 22px;
+  font-weight: bold;
+}
+
+.container {
+  max-width: 900px;
+  margin: auto;
+  padding: 20px;
+}
+
+.card {
+  background: var(--card);
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+}
+
+.card h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+}
+
+input {
+  width: 100%;
+  padding: 10px;
+  margin: 6px 0 12px 0;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+}
+
+button {
+  padding: 10px 16px;
+  background: var(--primary);
+  border: none;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+button.secondary {
+  background: #6b7280;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.hidden {
+  display: none;
+}
+
+.badge {
+  background: #e0e7ff;
+  color: #1e3a8a;
+  padding: 6px 10px;
+  border-radius: 20px;
+  display: inline-block;
+  margin-top: 5px;
+}
+
+pre {
+  background: #f1f5f9;
+  padding: 12px;
+  border-radius: 8px;
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+footer {
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  padding: 10px;
+}
+</style>
+</head>
+
+<body>
+
+<header>🏦 Secure Banking System</header>
+
+<div class="container">
+
+<!-- CREATE ACCOUNT -->
+<div class="card">
+<h3>Create Account</h3>
+<input id="newAccNo" placeholder="Account Number">
+<input id="newName" placeholder="Account Holder Name">
+<input id="newPass" type="password" placeholder="Password">
+<label>
+  <input type="checkbox" id="newKyc"> KYC Verified
+</label><br><br>
+<button onclick="createAccount()">Create Account</button>
+</div>
+
+<!-- LOGIN -->
+<div id="loginSection" class="card">
+<h3>Login</h3>
+<input id="loginAcc" placeholder="Account Number">
+<input id="loginPass" type="password" placeholder="Password">
+<button onclick="login()">Login</button>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard" class="hidden">
+
+<div class="card">
+<h3>Account Summary</h3>
+<p><b>Account No:</b> <span id="accNo"></span></p>
+<p><b>Current Balance:</b> ₹ <span id="balance">0</span></p>
+<span class="badge">Secure Account</span>
+</div>
+
+<div class="row">
+
+<div class="card">
+<h3>Deposit</h3>
+<input id="depAmt" placeholder="Amount">
+<button onclick="deposit()">Deposit</button>
+</div>
+
+<div class="card">
+<h3>Withdraw</h3>
+<input id="withAmt" placeholder="Amount">
+<button onclick="withdraw()">Withdraw</button>
+</div>
+
+<div class="card">
+<h3>Transfer</h3>
+<input id="recvAcc" placeholder="Receiver Account">
+<input id="transAmt" placeholder="Amount">
+<button onclick="transfer()">Transfer</button>
+</div>
+
+</div>
+
+<div class="card">
+<h3>Transaction History</h3>
+<button onclick="loadTransactions()">Load History</button>
+<pre id="transactions"></pre>
+</div>
+
+<button class="secondary" onclick="logout()">Logout</button>
+
+</div>
+
+<div class="card">
+<h3>System Output</h3>
+<pre id="output"></pre>
+</div>
+
+</div>
+
+<footer>
+Banking System • Secure Transactions • MongoDB • Node.js
+</footer>
+
+<script>
+const api = path => "http://localhost:3000/api" + path;
+
+let token = "";
+let accountNo = "";
+
+function output(msg){
+  document.getElementById("output").innerText =
+    JSON.stringify(msg, null, 2);
+}
+
+async function createAccount(){
+  const res = await fetch(api("/createAccount"), {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({
+      accountNo: newAccNo.value,
+      holderName: newName.value,
+      password: newPass.value,
+      isKYCVerified: newKyc.checked
+    })
+  });
+  output(await res.json());
+}
+
+async function login(){
+  const res = await fetch(api("/login"), {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({
+      accountNo: loginAcc.value,
+      password: loginPass.value
+    })
+  });
+
+  const data = await res.json();
+  if(data.token){
+    token = data.token;
+    accountNo = loginAcc.value;
+    accNo.innerText = accountNo;
+
+    loginSection.classList.add("hidden");
+    dashboard.classList.remove("hidden");
+    loadSummary();
+  } else output(data);
+}
+
+function logout(){
+  token = "";
+  dashboard.classList.add("hidden");
+  loginSection.classList.remove("hidden");
+}
+
+async function loadSummary(){
+  const res = await fetch(api("/balance"), {
+    headers: { Authorization: token }
+  });
+  const data = await res.json();
+  balance.innerText = data.balance;
+}
+
+async function deposit(){
+  const res = await fetch(api("/deposit"), {
+    method: "POST",
+    headers: {
+      "Content-Type":"application/json",
+      Authorization: token
+    },
+    body: JSON.stringify({ amount: Number(depAmt.value) })
+  });
+  output(await res.json());
+  loadSummary();
+}
+
+async function withdraw(){
+  const res = await fetch(api("/withdraw"), {
+    method: "POST",
+    headers: {
+      "Content-Type":"application/json",
+      Authorization: token
+    },
+    body: JSON.stringify({ amount: Number(withAmt.value) })
+  });
+  output(await res.json());
+  loadSummary();
+}
+
+async function transfer(){
+  const res = await fetch(api("/transfer"), {
+    method: "POST",
+    headers: {
+      "Content-Type":"application/json",
+      Authorization: token
+    },
+    body: JSON.stringify({
+      receiverAccount: recvAcc.value,
+      amount: Number(transAmt.value)
+    })
+  });
+  output(await res.json());
+  loadSummary();
+}
+
+async function loadTransactions(){
+  const res = await fetch(api("/transactions"), {
+    headers: { Authorization: token }
+  });
+  transactions.innerText =
+    JSON.stringify(await res.json(), null, 2);
+}
+</script>
+
+</body>
+</html>
